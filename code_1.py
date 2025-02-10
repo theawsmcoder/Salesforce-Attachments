@@ -1,7 +1,7 @@
 import requests
 import base64
 
-# Configuration
+# Configuration. DO NOT COMMIT
 CLIENT_ID = ''
 CLIENT_SECRET = ''
 USERNAME = ''
@@ -34,7 +34,7 @@ def fetch_attachments(instance_url, access_token):
         'Authorization': f'Bearer {access_token}'
     }
 
-    # Query attachments with a limit (adjust as needed)
+    # Query attachments with a limit (adjust as needed). Apply filters to get correct records
     soql_query = (
         "SELECT Id, Name, Description, ParentId, ContentType FROM Attachment" # WHERE CreatedDate >= LAST_N_DAYS:7"
     )
@@ -48,8 +48,8 @@ def fetch_attachments(instance_url, access_token):
     else:
         raise ValueError(f"SOQL query failed: {response.text}")
     
-
 def save_attachment_file(filename, content):
+    """Save the content of an attachment to local disk."""
     try:
         with open(filename, 'wb') as f:
                 f.write(content)
@@ -58,7 +58,7 @@ def save_attachment_file(filename, content):
 
 
 def get_attachment_content(instance_url, access_token, attachment):
-    """Save the content of an attachment to local disk."""
+    """Get the file content from the attachments"""
     headers = {
         'Authorization': f'Bearer {access_token}'
     }
@@ -73,13 +73,15 @@ def get_attachment_content(instance_url, access_token, attachment):
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
         filename = attachment.get('Name', 'file_') #+ '.content'
-        save_attachment_file(filename, response.content)
+        #save_attachment_file(filename, response.content) uncomment this if you want to save the attachments locally
+        # alternatively you can call save_attachment_file() from anywhere 
         return filename, response.content
     else:
         raise ValueError(f"Failed to retrieve file content for {file_id}: {response.text}")
 
 
 def create_attachment(instance_url, access_token, attachment, file_content):
+    """Used to create attachments in target org"""
     headers = {
         'Authorization': f'Bearer {access_token}',
         'Content-Type': f'application/json'
@@ -90,7 +92,7 @@ def create_attachment(instance_url, access_token, attachment, file_content):
     payload = {
         'Name': 'test' + attachment.get('Name',''),
         'Description': attachment.get('Descriptionn',''),
-        'Body': base64.b64encode(file_content).decode("utf-8"),
+        'Body': base64.b64encode(file_content).decode("utf-8"), # base64 encoding is necessary. if you dont decode it to utf-8, it remains in binary format which isnt supported
         'ParentId': attachment.get('ParentId'),
         'ContentType': attachment.get('ContentType')
     }
@@ -108,7 +110,8 @@ def create_attachment(instance_url, access_token, attachment, file_content):
     except Exception as e:
         print(f'An error occured: ', str(e))
 
-
+# Redundant function. I thought I would attach files separately once the attachment records are created
+# but I can create attachments along with the file if I encode the file content in base64 format
 def attach_file(instance_url, access_token, attachmentId, file_content, content_type):
     headers = {
         'Authorization': f'Bearer {access_token}',
@@ -131,7 +134,7 @@ def attach_file(instance_url, access_token, attachmentId, file_content, content_
 
 
 def main():
-    """Main function to retrieve and save attachments."""
+    """Main function"""
     try:
         auth_response = get_access_token()
         access_token = auth_response.get('access_token')
